@@ -110,33 +110,6 @@ let findNodes coords =
         moves plot
         |> List.sumBy (countEdge plot) > 0)
 
-let findEdges crop coords =
-    let dirs = Set [R; D; L; U]
-    let turn = function | U -> R | D -> L | L -> U | R -> D
-    let (|Invalid|SameCrop|Ignore|) (r, c) =
-        if not (isValid (r, c)) then Invalid
-        elif input[r][c] = crop then SameCrop
-        else Ignore
-
-    let addTo plot set = set |> Set.add plot
-    let rec loop plot dir visit seen edges =
-        let neighbor = move plot dir
-        match neighbor with
-        | _ when seen |> Set.contains neighbor -> edges, seen
-        | SameCrop ->
-            loop neighbor dir (addTo neighbor seen) edges
-        | _ ->
-            dirs
-            |> Set.remove dir
-            |> Set.fold (fun (edges, seen) d ->
-                loop neighbor d (addTo neighbor seen) (addTo neighbor edges))
-                (edges, seen)
-            // loop plot (turn dir) (addTo neighbor seen) (addTo plot edges)
-
-    let head = coords |> List.head
-    let first = Set.singleton head
-    loop head R first first |> fst
-
 let distinctPlots plot coords =
     coords
     |> List.fold (fun acc p ->
@@ -242,6 +215,33 @@ let results = testPoints |> List.map (Drawing.isPointInPolygon polygon)
 results |> List.iter (printfn "%A")
 
 // Part 2
+let findEdges crop coords =
+    let dirs = Set [R; D; L; U]
+    let turn = function | U -> R | D -> L | L -> U | R -> D
+    let (|Invalid|SameCrop|Ignore|) (r, c) =
+        if not (isValid (r, c)) then Invalid
+        elif input[r][c] = crop then SameCrop
+        else Ignore
+
+    let addTo plot set = set |> Set.add plot
+    let rec loop plot dir visit seen edges =
+        let neighbor = move plot dir
+        match neighbor with
+        | _ when seen |> Set.contains neighbor -> edges, seen
+        | SameCrop ->
+            loop neighbor dir (addTo neighbor seen) edges
+        | _ ->
+            dirs
+            |> Set.remove dir
+            |> Set.fold (fun (edges, seen) d ->
+                loop neighbor d (addTo neighbor seen) (addTo neighbor edges))
+                (edges, seen)
+            // loop plot (turn dir) (addTo neighbor seen) (addTo plot edges)
+
+    let head = coords |> List.head
+    let first = Set.singleton head
+    loop head R first first |> fst
+
 let exteriorEdges =
     cropsets
     |> List.map (fun (k, v) -> (k, v |> distinctPlots k))
