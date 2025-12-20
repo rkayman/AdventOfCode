@@ -76,12 +76,65 @@ module Problem =
                 | TooHigh -> List.rev acc
         loop s 0L []
 
-    let findInvalid (record: Record) =
+    let findInvalid record =
         let b, e = record.bounds
         let fdups = findDups record.lower record.upper
         match b, e with
         | IsOddLen, IsOddLen -> Array.empty
         | _ -> b |> fdups |> List.toArray
+
+    type InvalidPattern =
+        | OneDigitRepeating
+        | TwoDigitRepeating
+        | ThreeDigitRepeating
+        | HalfRepeating
+
+    let (|Even|Odd|) (s: string) =
+        let len = s.Length
+        if (len &&& 1) = 0 then Even len else Odd len
+
+    let getInvalidSearchPatterns record =
+        let b, e = record.bounds
+        let even = [ HalfRepeating; TwoDigitRepeating ]
+        let odd = [ OneDigitRepeating ]
+        match b, e with
+        | Even _, Even _ ->
+            even
+        | Odd x, Odd y ->
+            if x % 3 = 0 || y % 3 = 0
+            then ThreeDigitRepeating :: odd
+            else odd
+        | Odd x, _
+        | _, Odd x ->
+            let ans = odd @ even
+            if x % 3 = 0
+            then ThreeDigitRepeating :: ans
+            else ans
+
+    let makeOneDigitRepeating (s: ReadOnlySpan<'a>) =
+        let rec loop n acc =
+            let str = String('1', n)
+            if str.Length > s.Length then
+                List.rev acc
+            else
+                loop (n + 1) (str :: acc)
+        loop 0L []
+
+    let findInvalid2 record =
+        let patterns = getInvalidSearchPatterns record
+        patterns |> List.collect (function
+            | OneDigitRepeating ->
+                findDups record.lower record.upper "1"
+            | TwoDigitRepeating ->
+                findDups record.lower record.upper "12"
+            | ThreeDigitRepeating ->
+                findDups record.lower record.upper "123"
+            | HalfRepeating ->
+                let len = (record.bounds |> fst).Length
+                let halfLen = len >>> 1
+                let half = String('1', halfLen)
+                findDups record.lower record.upper half
+            )
 
 //Example.given
 // Example.given2
