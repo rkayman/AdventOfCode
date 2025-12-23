@@ -17,6 +17,7 @@ module Example =
         """
 
     let expected = 13
+    let removable = 43
 
     let answer = """
         ..xx.xx@x.
@@ -66,7 +67,7 @@ module Problem =
                             |> Seq.length
 
                         if accessibleRolls < 4 then
-                            yield (r, c), accessibleRolls
+                            yield (r, c)
         }
 
     let solve (input: string) =
@@ -74,6 +75,19 @@ module Problem =
         |> findAccessibleRolls
         |> Seq.length
 
+    let solve2 (input: string) =
+        let warehouse = parse input
+        let rec loop (grid: char[][]) numRemoved removableList =
+            removableList
+            |> List.iter (fun (r, c) -> grid[r][c] <- 'x')
+
+            match findAccessibleRolls grid |> Seq.toList with
+            | [] -> numRemoved
+            | rs ->
+                loop grid (numRemoved + rs.Length) rs
+
+        loop warehouse 0 []
+
 File.ReadAllText "2025/input-04.txt"
 // Example.given
-|> Problem.solve
+|> Problem.solve2
