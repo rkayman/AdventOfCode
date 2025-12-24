@@ -35,7 +35,7 @@ module Problem =
         let freshRanges =
             sections[0]
                 .Split(Environment.NewLine, splitOptions)
-                |> Array.map (_.Split("-", splitOptions))
+                |> Array.map _.Split("-", splitOptions)
                 |> Array.map (fun range -> (int64 range[0], int64 range[1]))
         let availableIds =
             sections[1]
@@ -49,13 +49,28 @@ module Problem =
     let inline exists xs x =
         xs |> Array.exists (filter x)
     
-    let solve (input: string) : int =
+    let part1 (input: string) =
         let db = parse input
         db.availableIds
         |> Array.filter (exists db.freshRanges)
         |> Array.length
     
-    
+    let part2 (input: string) =
+        (parse input).freshRanges
+        |> Array.sortBy fst
+        |> Array.fold
+            (fun acc (min, max) ->
+                match acc with
+                | [] -> [ (min, max) ]
+                | (lastMin, lastMax) :: tail when min <= lastMax + 1L ->
+                    (lastMin, Int64.Max(lastMax, max)) :: tail
+                | _ ->
+                    (min, max) :: acc)
+            []
+        |> List.rev
+        |> List.sumBy (fun (min, max) -> max - min + 1L)
+        
+
 File.ReadAllText "2025/input-05.txt"
 // Example.given
-|> Problem.solve
+|> Problem.part2
