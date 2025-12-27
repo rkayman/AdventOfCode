@@ -3,19 +3,19 @@ open System.IO
 
 module Example =
 
-    let given = """123 328  51 64 
- 45 64  387 23 
+    let given = """123 328  51 64
+ 45 64  387 23
   6 98  215 314
 *   +   *   +  """
 
     let expected = [ 33210L; 490L; 4243455L; 401L ]
     let sum = 4277556L
-    
+
     let expected2 = [ 1058L; 3253600L; 625L; 8544L ]
     let sum2 = 3263827L
 
 module Problem =
-    
+
     type Operation =
         | Add
         | Multiply
@@ -46,12 +46,12 @@ module Problem =
         match op with
         | Add -> acc + n
         | Multiply -> acc * n
-        
+
     let Op input =
         match input with
         | Op op -> op
         | _ -> failwith "unexpected"
-    
+
     let solve1 (input: string) =
         let input =
             parse input
@@ -69,7 +69,7 @@ module Problem =
             let initial = identity op'
             ns |> Array.fold (folder op') initial)
         |> Array.sum
-                    
+
     let solve2 (input: string) =
         let lines =
             input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
@@ -77,20 +77,20 @@ module Problem =
         let lineLen = lines |> Array.last |> _.ToCharArray().Length
 
         let ops, cols =
-            let indexedOps = 
+            let indexedOps =
                 lines
                 |> Array.last
                 |> _.ToCharArray()
                 |> Array.indexed
                 |> Array.filter (fun (_, c) -> c <> ' ')
-                
+
             let indices =
                 indexedOps
                 |> Array.map fst
                 |> (Array.rev >> Array.append [| lineLen |] >> Array.rev)
                 |> Array.pairwise
                 |> Array.map (fun (i, j) -> if j = lineLen then (i, j - 1) else (i, i + j - i - 2))
-                
+
             (indexedOps |> Array.map snd |> Array.rev, indices)
 
         let chunks =
@@ -106,7 +106,7 @@ module Problem =
             |> Array.map fst
             |> Array.tail
 
-        let data = 
+        let data =
             lines
             |> Array.rev
             |> Array.tail
@@ -129,7 +129,7 @@ module Problem =
                 | '+' -> (+)
                 | '*' -> (*)
                 | _ -> failwith "unexpected"
-                
+
             xs |> Array.reduce op
             )
         |> Array.sum

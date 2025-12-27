@@ -18,9 +18,9 @@ module Example =
 ...............
 .^.^.^.^.^...^.
 ..............."""
-    
+
     let expected = 21
-    
+
     let answer = """.......S.......
 .......|.......
 ......|^|......
@@ -38,8 +38,17 @@ module Example =
 |^|^|^|^|^|||^|
 |.|.|.|.|.|||.|"""
 
-    
+
 module Problem =
-    
-    
-    
+
+    let parse (input: string) =
+        input.Split(Environment.NewLine.ToCharArray(), StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map Seq.toArray
+        |> Array.map Array.indexed
+        |> Array.indexed
+
+
+// File.ReadAllText "2025/advent-07.txt"
+Example.given
+|> Problem.parse
+|> printfn "%A"
