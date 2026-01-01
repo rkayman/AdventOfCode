@@ -29,83 +29,98 @@ module Example =
     
     
 module Problem =
-    type JunctionBox = int list
+    type JunctionBox = int64 * int64 * int64
     type Circuit = Set<JunctionBox>
 
-    let distances jbs limit = 
-        let distance jb1 jb2 =
-            jb2
-            |> List.zip jb1
-            |> List.sumBy (fun (x, y) -> abs (x - y))
-        
-        let conditionalTake limit (lst: 'a list) =
-            if lst.Length > limit then
-                lst |> List.take limit
-            else
-                lst
-                
-        let rec pairings max result xss = 
-            match xss with
-            | [] -> result
-            | x::xs ->
-                let result' =
-                    xs
-                    |> List.map (fun y -> (x, y))
-                    |> List.map (fun (a, b) -> ((a, b), distance a b))
-                    |> List.filter (fun (_, d) -> d < max)
-                    |> List.sortBy snd
-                    |> conditionalTake limit
-                    
-                let max' =
-                    result' |> List.maxBy snd |> snd
-
-                pairings max' result' xs
-        jbs |> pairings Int32.MaxValue []
-                
+    let (|Triple|_|) (lst: int64[]) =
+        match lst with
+        | [|a; b; c|] -> Some (a, b, c)
+        | _ -> None
+    
     let parse (input: string) =
         input
             .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
-        |> Array.toList
-        |> List.collect (_.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                         >> Array.map int
-                         >> Array.toList)
-        |> List.chunkBySize 3
-
-    let solve (input: string) =
+        |> Array.collect (_.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                         >> Array.map int64)
+        |> Array.chunkBySize 3
+        |> Array.choose (function Triple (a, b, c) -> Some (a, b, c) | _ -> None)
+    
+    let solve1 limit (input: string)=
         let jbs = parse input
+
+        let capacity = (jbs.Length * jbs.Length / 2) - (jbs.Length / 2)
+        let mutable index =
+            System.Collections.Generic.Dictionary<JunctionBox, int>(capacity)
+        let mutable table =
+            System.Collections.Generic.Dictionary<int, Circuit>(capacity)
         
-        0 // Placeholder for actual solution logic
+        let insert i jb =
+            index[jb] <- i
+            table[i] <- set [ jb ]
+        
+        jbs |> Array.iteri insert
+
+        let pow a b = pown (a - b) 2 |> float
+
+        let pairs =
+            [|
+                for i in 0 .. jbs.Length - 1 do
+                    let ax, ay, az = jbs[i]
+                    for j in i + 1 .. jbs.Length - 1 do
+                        let bx, by, bz = jbs[j]
+                        let cost = pow ax bx + pow ay by + pow az bz |> sqrt
+                        yield (jbs[i], jbs[j], cost)
+            |]
+            |> Array.sortBy (fun (_, _, cost) -> cost)
+        
+        let connectCircuits a b =
+            match index[a], index[b] with
+            | ai, bi when ai = bi -> true
+            | ai, bi ->
+                let circuitA = table[ai]
+                let circuitB = table[bi]
+                if circuitA.Count >= circuitB.Count then
+                    // Merge B into A
+                    table[ai] <- Set.union circuitA circuitB
+                    circuitB
+                    |> Seq.iter (fun jb ->
+                        table.Remove(index[jb]) |> ignore
+                        index[jb] <- ai)
+                else
+                    // Merge A into B
+                    table[bi] <- Set.union circuitB circuitA
+                    circuitA
+                    |> Seq.iter (fun jb ->
+                        table.Remove(index[jb]) |> ignore
+                        index[jb] <- bi)
+                true
+
+        let rec loop cnt xs =
+            if cnt <= 0 then
+                table.Values |> Seq.toList
+            else
+                match xs with
+                | [] -> failwith "This should not happen"
+                | (a, b, _) :: rest -> 
+                    let cnt' = if connectCircuits a b then cnt - 1 else cnt
+                    loop cnt' rest
+
+        try 
+            pairs |> Array.toList |> loop limit
+        with ex ->
+            eprintfn $"Exception: %s{ex.Message}\n%s{ex.StackTrace}"
+            index |> Seq.iter (fun kvp -> eprintfn $"Index Key: %A{kvp.Key}, Value: %d{kvp.Value}")
+            table |> Seq.iter (fun kvp -> eprintfn $"Table Key: %d{kvp.Key}, Value Count: %A{kvp.Value}")
+            List.Empty
 
 
-// System.IO.File.ReadAllText "2025/input-08.txt"
-Example.given
-|> Problem.parse
-
-
-let mutable xdict =
-    System.Collections.Generic.Dictionary<Problem.JunctionBox, Problem.Circuit>()
-    
-let xss = 
-    Example.given
-    |> Problem.parse
-    
-let pairs =
-    xss
-    |> List.rev
-    |> List.zip xss
-    |> List.take 3
-
-pairs
-|> List.map (fun (a,b) -> [ a; b ])
-|> List.map Set.ofList
-|> List.iter (fun xs ->
-    xs |> Set.iter (fun jb ->
-        xdict[jb] <- xs)
-    )
-
-let a = xdict[[57; 618; 57]]
-let b = xdict[[162; 817; 812]]
-let c = xdict[[984; 92; 344]]
-
-a = b
-a = c
+System.IO.File.ReadAllText "2025/input-08.txt"
+// Example.given
+|> Problem.solve1 1000
+|> List.map (fun set -> set.Count, set)
+|> List.sortByDescending fst
+// |> printfn "Result: %A"
+|> List.map fst
+|> List.take 3
+|> List.reduce (*)
+|> printfn "Result: %d"
