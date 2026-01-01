@@ -120,9 +120,55 @@ module Problem =
             index |> Seq.iter (fun kvp -> eprintfn $"Index Key: %A{kvp.Key}, Value: %d{kvp.Value}")
             table |> Seq.iter (fun kvp -> eprintfn $"Table Key: %d{kvp.Key}, Value Count: %A{kvp.Value}")
             -1
+            
+    // Part 2
+    
+    let solve2 (input: string)=
+        let jbs = parse input
+
+        let capacity = (jbs.Length * jbs.Length / 2) - (jbs.Length / 2)
+        let mutable index = Dictionary<JunctionBox, int>(capacity)
+        let mutable table = Dictionary<int, Circuit>(capacity)
+        
+        let insert i jb =
+            index[jb] <- i
+            table[i] <- set [ jb ]
+        
+        jbs |> Array.iteri insert
+
+        let pairs = allPairsByCost jbs
+
+        let rec loop xs =
+            match xs with
+            | [] -> failwith "This should not happen"
+            | (a, b, _) :: rest ->
+                connectCircuits index table a b
+                if table.Count = 1 then
+                    let a1, _, _ = a
+                    let b1, _, _ = b
+                    a1 * b1, table.Values |> Seq.toList
+                else
+                    loop rest
+
+        try 
+            pairs
+            |> Array.toList
+            |> loop
+        with ex ->
+            eprintfn $"Exception: %s{ex.Message}\n%s{ex.StackTrace}"
+            index |> Seq.iter (fun kvp -> eprintfn $"Index Key: %A{kvp.Key}, Value: %d{kvp.Value}")
+            table |> Seq.iter (fun kvp -> eprintfn $"Table Key: %d{kvp.Key}, Value Count: %A{kvp.Value}")
+            -1, []
+
 
 #time
 System.IO.File.ReadAllText "2025/input-08.txt"
 // Example.given
 |> Problem.solve1 1000
 |> printfn "Result: %d"
+
+#time
+System.IO.File.ReadAllText "2025/input-08.txt"
+// Example.given
+|> Problem.solve2
+// |> printfn "Result: %d"
