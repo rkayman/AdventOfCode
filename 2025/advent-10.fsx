@@ -8,22 +8,25 @@ module Problem =
 [.###.#] (0,1,2,3,4) (0,3,4) (0,1,2,4,5) (1,2) {10,11,11,5,10,5}
 """
 
-    type Indicator =
-        | On
-        | Off
-        
+    type Indicator = On | Off
+    module Indicator =
+        let fromChar = function
+            | '#' -> On
+            | '.' -> Off
+            | ch -> failwithf $"Invalid indicator char: %c{ch}"
+
+        let toggle = function On -> Off | Off -> On
+
     type Indicators = Indicator[]
     module Indicators =
         let init length: Indicators =
             Array.create length Off
-
-        let toggle = function On -> Off | Off -> On
         
         let toggle (indexes: int[]) (indicators: Indicators) : Indicators =
             indexes
             |> Array.map (fun idx -> idx, indicators[idx])
             |> Array.iter (fun (idx, state) ->
-                indicators[idx] <- toggle state)
+                indicators[idx] <- Indicator.toggle state)
             indicators
             
     type Button =
@@ -39,34 +42,46 @@ module Problem =
             buttons: Buttons
             reqdJoltages: int[]
         }
-    
+
+    let parseIndicators (input: string) : Indicators =
+        input
+            .ToCharArray()
+            |> Array.map Indicator.fromChar
+
+    let parseButtonSchematics (input: string) : Button =
+        let parts = input.Trim([|'('; ')'|]).Split([|','|], StringSplitOptions.RemoveEmptyEntries)
+        {
+            presses = parts.Length
+            wiredTo = parts |> Array.map Int32.Parse
+        }
+        
+    let parseJoltages (input: string) : int[] =
+        input.Trim([|'{' ; '}'|])
+            .Split([|','|], StringSplitOptions.RemoveEmptyEntries)
+        |> Array.map Int32.Parse
+        
+    let parseMachinePieces (lineParts: string[]) : Machine =
+        let indicators = lineParts[0].Trim([|'['; ']'|]) |> parseIndicators 
+
+        let buttons =
+            lineParts[1 .. (lineParts.Length - 2)]
+            |> Array.map parseButtonSchematics
+        
+        let joltages = Array.last lineParts |> parseJoltages
+
+        {
+            indicatorsGoal = indicators
+            buttons = buttons
+            reqdJoltages = joltages
+        }
+            
     let parse (input: string) =
-        input.Split([|'\n'; '\r'|], StringSplitOptions.RemoveEmptyEntries)
-        |> Array.map (fun line ->
-            let parts = line.Split([|' '|], StringSplitOptions.RemoveEmptyEntries)
-            let indicators =
-                parts[0].Trim([|'['; ']'|])
-                |> Seq.map (fun c -> c = '#')
-                |> Seq.toArray
-            
-            let wiringSchemas =
-                parts[1..(parts.Length - 2)]
-                |> Array.map _.Trim([|'('; ')'|])
-                |> Array.map Int32.Parse)
-            
-            let reqdJoltages =
-                parts[parts.Length - 1]
-                .Trim([|'{' ; '}'|])
-                .Split([|','|], StringSplitOptions.RemoveEmptyEntries)
-                |> Array.map Int32.Parse
-            {
-                indicators = indicators
-                wiringSchemas = wiringSchemas
-                reqdJoltages = reqdJoltages
-            }
-        )
+        input
+            .Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries)
+            |> Array.map _.Split(' ', StringSplitOptions.RemoveEmptyEntries)
+            |> Array.map parseMachinePieces
         
 
 Problem.given
 |> Problem.parse
-|> printfn "%A"
+|> Array.iter (printfn "%A")
